@@ -453,14 +453,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
-  ultralytics_yolo:
+  ultralytics_yolo_dental:
     dependency: "direct main"
     description:
-      name: ultralytics_yolo
-      sha256: f1f754b44ec7d74ec0dded1d268e5d606413fa120503cea401c9081110c39492
+      name: ultralytics_yolo_dental
+      sha256: a6fa4f97f6b12758a01945bd863d32de9b3c798e9cde19998fac9ed78865221e
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.27"
+    version: "1.0.1"
   vector_math:
     dependency: transitive
     description:
@@ -494,5 +494,5 @@ packages:
     source: hosted
     version: "1.1.0"
 sdks:
-  dart: ">=3.8.1 <4.0.0"
-  flutter: ">=3.32.1"
+  dart: ">=3.7.0 <4.0.0"
+  flutter: ">=3.27.0"
