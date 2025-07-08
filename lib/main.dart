@@ -22,7 +22,7 @@ void main() {
   // 백엔드 서버(Node.js Express)는 'http://localhost:3000'에서 실행 중입니다.
   // Flutter 앱이 백엔드에 접근하려면, 앱이 실행되는 환경에서 'localhost:3000'에 어떻게 접근해야 하는지 알아야 합니다.
 
-  const String globalBaseUrl = "https://b5d3fd5850ed.ngrok-free.app/api";
+  const String globalBaseUrl = "https://fe21876d118d.ngrok-free.app/api";
 
   runApp(
     MultiProvider(
