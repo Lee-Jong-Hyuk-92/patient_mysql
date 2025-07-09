@@ -1,150 +1,199 @@
-import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import '../model/user.dart'; // User 모델 임포트
+import 'dart:convert';
+import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:patient_mysql/features/auth/model/user.dart';
 
 class AuthViewModel with ChangeNotifier {
   final String _baseUrl;
-
-  /// ✅ public getter 추가 (외부에서 접근 가능)
-  String get baseUrl => _baseUrl;
-
-  User? _loggedInUser;
-  User? get loggedInUser => _loggedInUser;
-
-  bool _isCheckingUserId = false;
-  bool get isCheckingUserId => _isCheckingUserId;
-
-  String? _duplicateCheckErrorMessage;
-  String? get duplicateCheckErrorMessage => _duplicateCheckErrorMessage;
+  String? _errorMessage;
+  User? _currentUser;
 
   AuthViewModel({required String baseUrl}) : _baseUrl = baseUrl;
 
-  /// 아이디 중복 확인
-  Future<bool?> checkUserIdDuplicate(String userId) async {
-    _isCheckingUserId = true;
-    _duplicateCheckErrorMessage = null;
-    notifyListeners();
+  String? get errorMessage => _errorMessage;
+  User? get currentUser => _currentUser;
 
+  Future<bool?> checkEmailDuplicate(String email) async {
+    _errorMessage = null;
     try {
-      final res = await http.get(Uri.parse('$_baseUrl/auth/check-username?username=$userId'));
-
+      // ✅ 의사 이메일 중복 확인 경로로 변경
+      final res = await http.get(Uri.parse('$_baseUrl/doctor/exists?email=$email'));
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        final bool available = data['available'] == true;
-        _duplicateCheckErrorMessage = available ? null : data['message'];
-        return available;
+        return data['exists'] == true;
       } else {
-        final data = jsonDecode(res.body);
-        _duplicateCheckErrorMessage =
-            data['message'] ?? 'ID 중복검사 서버 응답 오류: StatusCode=${res.statusCode}';
-        if (kDebugMode) {
-          print('ID 중복검사 서버 응답 오류: StatusCode=${res.statusCode}, Body=${res.body}');
+        String message = '알 수 없는 오류 (Status: ${res.statusCode})';
+        try {
+          final decodedBody = json.decode(res.body);
+          if (decodedBody is Map && decodedBody.containsKey('message')) {
+            message = decodedBody['message'] as String;
+          } else if (decodedBody is String && decodedBody.isNotEmpty) {
+            message = decodedBody; // If it's a plain string error
+          }
+        } catch (e) {
+          // Body was not valid JSON or unexpected structure, use default message
         }
+        _errorMessage = '이메일 중복검사 서버 응답 오류: $message';
+        if (kDebugMode) {
+          print(_errorMessage);
+        }
+        notifyListeners();
         return null;
       }
     } catch (e) {
-      _duplicateCheckErrorMessage = '네트워크 오류: 서버에 연결할 수 없습니다.';
+      _errorMessage = '이메일 중복검사 중 네트워크 오류: ${e.toString()}';
       if (kDebugMode) {
-        print('ID 중복검사 중 네트워크 오류: $e');
+        print(_errorMessage);
       }
-      return null;
-    } finally {
-      _isCheckingUserId = false;
       notifyListeners();
+      return null;
     }
   }
 
-  /// 사용자 회원가입
-  Future<String?> registerUser(Map<String, String> userData) async {
+  Future<bool> registerUser(
+    String email,
+    String password, {
+    required String name,
+    required String phoneNumber,
+    String? clinicName,
+    String? clinicAddress,
+    bool isDoctor = false,
+  }) async {
+    _errorMessage = null;
     try {
+      // ✅ 의사 회원가입 경로로 변경
       final res = await http.post(
-        Uri.parse('$_baseUrl/auth/register'),
+        Uri.parse('$_baseUrl/doctor/register'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(userData),
+        body: jsonEncode({
+          'email': email,
+          'password': password,
+          'name': name,
+          'phoneNumber': phoneNumber,
+          'clinicName': clinicName,
+          'clinicAddress': clinicAddress,
+          'isDoctor': isDoctor,
+        }),
       );
 
       if (res.statusCode == 201) {
-        return null;
+        notifyListeners();
+        return true;
       } else {
-        final data = jsonDecode(res.body);
-        return data['message'] ?? '알 수 없는 오류가 발생했습니다.';
+        String message = '알 수 없는 오류 (Status: ${res.statusCode})';
+        try {
+          final decodedBody = json.decode(res.body);
+          if (decodedBody is Map && decodedBody.containsKey('message')) {
+            message = decodedBody['message'] as String;
+          } else if (decodedBody is String && decodedBody.isNotEmpty) {
+            message = decodedBody;
+          }
+        } catch (e) {
+          // Body was not valid JSON or unexpected structure
+        }
+        _errorMessage = '회원가입 실패: $message';
+        notifyListeners();
+        return false;
       }
     } catch (e) {
+      _errorMessage = '네트워크 오류: ${e.toString()}';
       if (kDebugMode) {
         print('회원가입 중 네트워크 오류: $e');
       }
-      return '서버와 연결할 수 없습니다. 네트워크 상태를 확인해주세요.';
+      notifyListeners();
+      return false;
     }
   }
 
-  /// 사용자 로그인
-  Future<User?> loginUser(String userId, String password) async {
+  Future<User?> loginUser(String email, String password) async {
+    _errorMessage = null;
     try {
+      // ✅ 의사 로그인 경로로 변경
       final res = await http.post(
-        Uri.parse('$_baseUrl/auth/login'),
+        Uri.parse('$_baseUrl/doctor/login'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'username': userId, 'password': password}),
+        body: jsonEncode({'email': email, 'password': password}),
       );
 
       if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        try {
-          _loggedInUser = User.fromJson(data['user']);
+        final dynamic decodedBody = jsonDecode(res.body);
+        if (decodedBody is Map && decodedBody.containsKey('user') && decodedBody['user'] is Map) {
+          _currentUser = User.fromJson(decodedBody['user'] as Map<String, dynamic>);
           notifyListeners();
-          return _loggedInUser;
-        } catch (e) {
-          if (kDebugMode) {
-            print('User model 파싱 오류: $e, 응답 데이터: $data');
-          }
-          throw '사용자 정보 파싱 중 오류가 발생했습니다. (앱 버전 업데이트 필요)';
+          return _currentUser;
+        } else {
+          _errorMessage = '로그인 실패: 서버 응답 형식이 올바르지 않습니다.';
+          notifyListeners();
+          return null;
         }
       } else {
-        final data = jsonDecode(res.body);
-        throw data['message']?.toString() ?? '알 수 없는 로그인 오류';
+        String message = '알 수 없는 오류 (Status: ${res.statusCode})';
+        try {
+          final decodedBody = json.decode(res.body);
+          if (decodedBody is Map && decodedBody.containsKey('message')) {
+            message = decodedBody['message'] as String;
+          } else if (decodedBody is String && decodedBody.isNotEmpty) {
+            message = decodedBody;
+          }
+        } catch (e) {
+          // Body was not valid JSON or unexpected structure
+        }
+        _errorMessage = '로그인 실패: $message';
+        notifyListeners();
+        return null;
       }
     } catch (e) {
+      _errorMessage = '네트워크 오류: ${e.toString()}';
       if (kDebugMode) {
-        print('로그인 중 네트워크 오류 또는 예외: $e');
+        print('로그인 중 네트워크 오류: $e');
       }
-      if (e is String) {
-        throw e;
-      } else {
-        throw e.toString();
-      }
+      notifyListeners();
+      return null;
     }
   }
 
-  /// 사용자 로그아웃
-  void logoutUser() {
-    _loggedInUser = null;
-    notifyListeners();
-    if (kDebugMode) {
-      print('User logged out.');
-    }
-  }
-
-  /// 사용자 탈퇴
-  Future<String?> deleteUser(String userId, String password) async {
+  Future<String?> deleteUser(String email, String password) async {
+    _errorMessage = null;
     try {
+      // ✅ 의사 회원 탈퇴 경로로 변경
       final res = await http.delete(
-        Uri.parse('$_baseUrl/auth/delete_account'),
+        Uri.parse('$_baseUrl/doctor/delete_account'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'username': userId, 'password': password}),
+        body: jsonEncode({'email': email, 'password': password}),
       );
 
       if (res.statusCode == 200) {
-        logoutUser();
+        notifyListeners();
         return null;
       } else {
-        final data = jsonDecode(res.body);
-        return data['message'] ?? '회원 탈퇴 중 알 수 없는 오류가 발생했습니다.';
+        String message = '알 수 없는 오류 (Status: ${res.statusCode})';
+        try {
+          final decodedBody = json.decode(res.body);
+          if (decodedBody is Map && decodedBody.containsKey('message')) {
+            message = decodedBody['message'] as String;
+          } else if (decodedBody is String && decodedBody.isNotEmpty) {
+            message = decodedBody;
+          }
+        } catch (e) {
+          // Body was not valid JSON or unexpected structure
+        }
+        _errorMessage = message;
+        notifyListeners();
+        return _errorMessage;
       }
     } catch (e) {
+      _errorMessage = '네트워크 오류: ${e.toString()}';
       if (kDebugMode) {
         print('회원 탈퇴 중 네트워크 오류: $e');
       }
-      return '서버와 연결할 수 없습니다. 네트워크 상태를 확인해주세요.';
+      notifyListeners();
+      return _errorMessage;
     }
+  }
+
+  void logout() {
+    _currentUser = null;
+    notifyListeners();
   }
 }
