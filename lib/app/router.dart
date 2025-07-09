@@ -1,4 +1,4 @@
-// C:\Users\user\Desktop\0703flutter_v2\lib\app\router.dart
+// C:\Users\sptzk\Desktop\patient_mysql-2\lib\app\router.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -93,8 +93,11 @@ class AppRouter {
             builder: (context, state) => const UploadScreen(),
           ),
           GoRoute(
-            path: '/result', // 진단 결과 화면 (탭에서 접근 가능)
-            builder: (context, state) => const ResultScreen(),
+            path: '/result',
+            builder: (context, state) {
+              final result = state.extra as Map<String, dynamic>?; // ✅ AI 결과 받기
+              return ResultScreen(result: result);
+            },
           ),
           // ✅ 비대면 진단 결과 화면 라우트 추가
           GoRoute(

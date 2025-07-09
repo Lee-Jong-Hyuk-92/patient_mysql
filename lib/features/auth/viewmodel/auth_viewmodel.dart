@@ -5,7 +5,11 @@ import '../model/user.dart'; // User 모델 임포트
 
 class AuthViewModel with ChangeNotifier {
   final String _baseUrl;
-  User? _loggedInUser; // 로그인된 사용자 정보 저장
+
+  /// ✅ public getter 추가 (외부에서 접근 가능)
+  String get baseUrl => _baseUrl;
+
+  User? _loggedInUser;
   User? get loggedInUser => _loggedInUser;
 
   bool _isCheckingUserId = false;
@@ -61,7 +65,7 @@ class AuthViewModel with ChangeNotifier {
       );
 
       if (res.statusCode == 201) {
-        return null; // 성공
+        return null;
       } else {
         final data = jsonDecode(res.body);
         return data['message'] ?? '알 수 없는 오류가 발생했습니다.';
@@ -86,7 +90,7 @@ class AuthViewModel with ChangeNotifier {
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         try {
-          _loggedInUser = User.fromJson(data['user']); // ✅ 중복 없이 정확히 파싱
+          _loggedInUser = User.fromJson(data['user']);
           notifyListeners();
           return _loggedInUser;
         } catch (e) {
@@ -130,7 +134,7 @@ class AuthViewModel with ChangeNotifier {
       );
 
       if (res.statusCode == 200) {
-        logoutUser(); // 탈퇴 성공 시 로그아웃 처리
+        logoutUser();
         return null;
       } else {
         final data = jsonDecode(res.body);

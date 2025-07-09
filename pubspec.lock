@@ -453,14 +453,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
-  ultralytics_yolo_dental:
-    dependency: "direct main"
-    description:
-      name: ultralytics_yolo_dental
-      sha256: a6fa4f97f6b12758a01945bd863d32de9b3c798e9cde19998fac9ed78865221e
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.1"
   vector_math:
     dependency: transitive
     description:

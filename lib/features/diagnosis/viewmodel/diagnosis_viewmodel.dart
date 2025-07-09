@@ -1,5 +1,3 @@
-// C:\Users\user\Desktop\0703flutter_v2\lib\features\diagnosis\viewmodel\diagnosis_viewmodel.dart
-
 import 'package:flutter/material.dart';
 import '../../../core/result.dart'; // Result 클래스 임포트
 import '../../../data/remote/diagnosis_api_service.dart'; // ✅ 이 경로가 정확해야 합니다!
@@ -17,12 +15,11 @@ class DiagnosisResult {
   });
 }
 
-class DiagnosisViewModel extends ChangeNotifier { // ✅ 'extㅁnds' -> 'extends' 수정됨
-  final DiagnosisApiService _apiService; // final로 변경하고 생성자에서 초기화
+class DiagnosisViewModel extends ChangeNotifier {
+  final DiagnosisApiService _apiService;
 
-  // ✅ baseUrl을 생성자로 받도록 수정
   DiagnosisViewModel({required String baseUrl})
-      : _apiService = DiagnosisApiService(baseUrl: baseUrl); // baseUrl을 DiagnosisApiService 생성자에 전달
+      : _apiService = DiagnosisApiService(baseUrl: baseUrl);
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -44,14 +41,23 @@ class DiagnosisViewModel extends ChangeNotifier { // ✅ 'extㅁnds' -> 'extends
     notifyListeners();
   }
 
-  // 진단 결과 데이터 로드
+  // ✅ 외부에서 진단 결과를 설정하는 메서드
+  void setDiagnosisResult(Map<String, dynamic> result) {
+    _diagnosisResult = DiagnosisResult(
+      summary: result['summary'] ?? '진단 결과 요약 없음',
+      originalImageUrl: result['originalImageUrl'] ?? '',
+      overlayImageUrl: result['overlayImageUrl'],
+    );
+    notifyListeners();
+  }
+
+  // 진단 결과 데이터 로드 (서버 호출 기반)
   Future<void> fetchDiagnosisResult() async {
     _setLoading(true);
     _errorMessage = null;
     _successMessage = null;
 
     try {
-      // 실제 API 호출 대신 가상 데이터 사용
       final result = await _apiService.getDiagnosisResult();
 
       if (result is Success<Map<String, dynamic>>) {
@@ -72,9 +78,11 @@ class DiagnosisViewModel extends ChangeNotifier { // ✅ 'extㅁnds' -> 'extends
     }
   }
 
-  // 이미지 저장 (가상)
+  // 이미지 저장
   Future<void> saveImage(String imageUrl) async {
-    if (imageUrl.isEmpty || imageUrl == 'https://placehold.co/300x200/png?text=Original+Image' || imageUrl == 'https://placehold.co/300x200/png?text=Diagnosis+Result') {
+    if (imageUrl.isEmpty ||
+        imageUrl == 'https://placehold.co/300x200/png?text=Original+Image' ||
+        imageUrl == 'https://placehold.co/300x200/png?text=Diagnosis+Result') {
       _errorMessage = '저장할 이미지가 유효하지 않습니다.';
       notifyListeners();
       return;
@@ -98,7 +106,7 @@ class DiagnosisViewModel extends ChangeNotifier { // ✅ 'extㅁnds' -> 'extends
     }
   }
 
-  // 비대면 진단 신청 (가상)
+  // 비대면 진단 신청
   Future<void> requestNonFaceToFaceDiagnosis() async {
     _setLoading(true);
     _errorMessage = null;
